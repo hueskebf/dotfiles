@@ -1,0 +1,2 @@
+# Live kanban bearer token - never in the source repo
+.claude/hooks/.kanban.env
