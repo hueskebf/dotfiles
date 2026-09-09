@@ -136,7 +136,9 @@ alias ironwood-ps='ssh ironwood "docker ps --format \"table {{.Names}}\t{{.Statu
 alias ionos-ps='ssh ionos "docker ps --format \"table {{.Names}}\t{{.Status}}\""'
 
 # Claude Code
-alias clauded='claude --channels plugin:telegram@claude-plugins-official --dangerously-skip-permissions'
+# clauded is now ~/bin/clauded, a script: it resumes whichever Claude session
+# was last living in this tmux pane instead of always starting a fresh one.
+# An alias here would SHADOW that script, so there deliberately isn't one.
 
 # Kanban MCP auth for Codex and other CLI tools.
 if [ -f "$HOME/.claude/hooks/.kanban.env" ]; then

@@ -10,6 +10,10 @@
           {
             "type": "command",
             "command": "/home/brian/.claude/hooks/sessionstart-kanban.sh"
+          },
+          {
+            "type": "command",
+            "command": "/home/brian/.claude/hooks/record-session.sh"
           }
         ]
       },

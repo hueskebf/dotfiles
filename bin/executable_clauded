@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Launch Claude Code in this tmux pane, resuming whatever conversation was last
+# living here. Replaces the ~/.bashrc alias of the same name; extra arguments
+# are passed straight through.
+#
+# Why this exists: tmux-resurrect saves each pane's command line and can replay
+# it after a reboot, but a plain `claude` replays as a BRAND NEW agent - the
+# pane looks alive while the work is gone, which is worse than an empty shell.
+# Recording the session id per pane (record-session.sh, on SessionStart) and
+# resuming it here makes the replay honest.
+#
+# It resumes only when all three agree: a record exists for this pane, its
+# transcript is still on disk, and the pane is still in the directory the
+# session was started in. Anything else starts fresh. That bias is deliberate -
+# a missed resume costs you one `--resume` by hand, while a wrong resume drops
+# you into someone else's conversation with skip-permissions live.
+
+set -uo pipefail
+
+FLAGS=(--channels plugin:telegram@claude-plugins-official --dangerously-skip-permissions)
+CLAUDE="${CLAUDED_CLAUDE:-claude}"
+STORE="${PANE_SESSION_STORE:-$HOME/.claude/state/pane-sessions}"
+KEYSH="${PANE_SESSION_KEY:-$HOME/.claude/hooks/pane-session-key.sh}"
+
+resume=""
+key="$("$KEYSH" 2>/dev/null || true)"
+if [ -n "$key" ] && [ -r "$STORE/$key" ]; then
+  IFS=$'\t' read -r rid rcwd rpath < "$STORE/$key" || true
+  if [ -n "${rid:-}" ] && [ -n "${rpath:-}" ] && [ -f "$rpath" ] && [ "${rcwd:-}" = "$PWD" ]; then
+    resume="$rid"
+  fi
+fi
+
+if [ -n "$resume" ]; then
+  exec "$CLAUDE" "${FLAGS[@]}" --resume "$resume" "$@"
+else
+  exec "$CLAUDE" "${FLAGS[@]}" "$@"
+fi
