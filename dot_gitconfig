@@ -6,3 +6,6 @@
 [credential "https://gist.github.com"]
 	helper = 
 	helper = !/usr/bin/gh auth git-credential
+[user]
+	email = hueske@gmail.com
+	name = Brian Hueske\n

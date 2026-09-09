@@ -138,7 +138,20 @@ alias ionos-ps='ssh ionos "docker ps --format \"table {{.Names}}\t{{.Status}}\""
 # Claude Code
 alias clauded='claude --channels plugin:telegram@claude-plugins-official --dangerously-skip-permissions'
 
+# Kanban MCP auth for Codex and other CLI tools.
+if [ -f "$HOME/.claude/hooks/.kanban.env" ]; then
+  set -a
+  . "$HOME/.claude/hooks/.kanban.env"
+  set +a
+fi
+
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 export PATH="$HOME/.bun/bin:$PATH"
+
+# GitHub MCP plugin (plugin:github:github) auth — reuse the gh CLI token so it tracks the current login.
+# Fixes the "Authorization header is badly formatted" 400 from api.githubcopilot.com/mcp.
+if command -v gh >/dev/null 2>&1; then
+  export GITHUB_PERSONAL_ACCESS_TOKEN="$(gh auth token 2>/dev/null)"
+fi
