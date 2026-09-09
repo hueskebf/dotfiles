@@ -8,4 +8,4 @@
 	helper = !/usr/bin/gh auth git-credential
 [user]
 	email = hueske@gmail.com
-	name = Brian Hueske\n
+	name = Brian Hueske
