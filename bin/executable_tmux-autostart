@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# Bring tmux up on the first interactive terminal after a restart, restoring
+# the sessions - and the Claude agents in them - that were live before.
+#
+# Called from the very END of ~/.bashrc, which already returns early for
+# non-interactive shells, so this never runs for scp, ssh <cmd>, or Claude
+# Code's own tool shells.
+#
+# This runs on EVERY terminal you open, so it is written to be boring:
+#   - it never `exec`s, so detaching returns you to a normal shell and a broken
+#     tmux can never cost you a usable prompt
+#   - every branch exits 0
+#   - five independent conditions can turn it off
+#
+# Only the FIRST terminal attaches. The test for that is simply whether a
+# server is already running: if one is, this is a second window and the shell
+# is left alone - otherwise two clients share one session and tmux shrinks both
+# to the smaller terminal.
+#
+# A PLACEHOLDER session is needed, and this is not obvious: `tmux start-server`
+# looks like the right tool but a tmux server with no sessions exits IMMEDIATELY
+# (measured - it does not hang around waiting for continuum to restore). So the
+# placeholder holds the server open, and is killed again before attaching.
+#
+# Seams, all unset in production (see hooks/tests/test-tmux-autostart.sh):
+#   TMUX_AUTOSTART_TMUX      the tmux command
+#   TMUX_AUTOSTART_SAVEFILE  the resurrect 'last' marker
+#   TMUX_AUTOSTART_WAIT      seconds to wait for a restore to produce a session
+
+set -u
+
+[ -n "${TMUX:-}" ]                    && exit 0   # already inside tmux; never nest
+[ -n "${NO_TMUX:-}" ]                 && exit 0   # escape hatch: NO_TMUX=1 bash
+[ "${TERM_PROGRAM:-}" = "vscode" ]    && exit 0   # integrated terminals stay plain
+
+read -r -a TM <<< "${TMUX_AUTOSTART_TMUX:-tmux}"
+command -v "${TM[0]}" >/dev/null 2>&1 || exit 0
+
+# A server is already up: this is a second terminal. Leave it as a shell.
+"${TM[@]}" has-session 2>/dev/null && exit 0
+
+# Nothing has ever been saved, so there is nothing to restore. Do NOT start a
+# server and do NOT invent a session - just leave the shell alone. This also
+# means a machine with no saves never pays the wait below.
+SAVE="${TMUX_AUTOSTART_SAVEFILE:-$HOME/.local/share/tmux/resurrect/last}"
+[ -e "$SAVE" ] || exit 0
+
+# Hold the server open with a placeholder while continuum restores in the
+# background. Named distinctively so it cannot collide with a real session.
+PLACEHOLDER="_autostart_boot"
+"${TM[@]}" new-session -d -s "$PLACEHOLDER" 2>/dev/null || exit 0
+
+# Wait for the restore to produce a session that is NOT the placeholder.
+WAIT="${TMUX_AUTOSTART_WAIT:-5}"
+target=""
+i=0
+while [ "$i" -lt "$((WAIT * 4))" ]; do
+  target="$("${TM[@]}" list-sessions -F '#{session_name}' 2>/dev/null \
+            | grep -vxF "$PLACEHOLDER" | head -1)"
+  [ -n "$target" ] && break
+  sleep 0.25
+  i=$((i + 1))
+done
+
+# Always clean up the placeholder - landing in it would be worse than useless,
+# and leaving it behind would make the NEXT terminal think a real session is up.
+"${TM[@]}" kill-session -t "$PLACEHOLDER" 2>/dev/null
+
+# Nothing restored: the placeholder is gone, so is the server, and you get a
+# plain shell. Better that than a session you did not ask for - `tmux` is one
+# word when you want one.
+[ -n "$target" ] && "${TM[@]}" attach -t "$target"
+exit 0

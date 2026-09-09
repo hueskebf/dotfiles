@@ -157,3 +157,11 @@ export PATH="$HOME/.bun/bin:$PATH"
 if command -v gh >/dev/null 2>&1; then
   export GITHUB_PERSONAL_ACCESS_TOKEN="$(gh auth token 2>/dev/null)"
 fi
+
+# ── tmux autostart ──────────────────────────────────────────────────────────
+# Last line on purpose: when this attaches, it blocks until you detach, so
+# nothing after it would run. The early `case $- in *i*` return at the top of
+# this file keeps it out of scp, `ssh <cmd>` and Claude Code's tool shells.
+# Only the FIRST terminal after a restart attaches; see ~/bin/tmux-autostart.
+# Turn it off for one shell with:  NO_TMUX=1 bash
+[ -x "$HOME/bin/tmux-autostart" ] && "$HOME/bin/tmux-autostart"
